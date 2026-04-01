@@ -19,7 +19,13 @@ const CategorySchema = new mongoose.Schema({
     subject: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Subject'
-    }
+    },
+    files: [{
+        name: { type: String, required: true },
+        url: { type: String, required: true },
+        public_id: { type: String },
+        createdAt: { type: Date, default: Date.now }
+    }]
 }, {
     timestamps: true
 });

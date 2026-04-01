@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
+const Module = require('../models/Module');
+const Subject = require('../models/Subject');
 
 // GET all categories
 router.get('/', async (req, res) => {
@@ -48,13 +50,35 @@ router.get('/:id', async (req, res) => {
 // POST new category
 router.post('/', async (req, res) => {
     const { title, desc, subjectId, moduleId } = req.body;
+
+    if (!title || !title.trim()) {
+        return res.status(400).json({ message: 'Category title is required' });
+    }
+
+    if (!moduleId || !moduleId.trim()) {
+        return res.status(400).json({ message: 'Module ID is required for category' });
+    }
+
     try {
+        const module = await Module.findById(moduleId);
+        if (!module) {
+            return res.status(404).json({ message: 'Module not found for this category' });
+        }
+
+        if (subjectId && subjectId.trim()) {
+            const subject = await Subject.findById(subjectId);
+            if (!subject) {
+                return res.status(404).json({ message: 'Subject not found for this category' });
+            }
+        }
+
         const newCategory = new Category({
-            title,
-            desc,
-            subject: subjectId,
+            title: title.trim(),
+            desc: desc ? desc.trim() : '',
+            subject: subjectId || module.subject,
             module: moduleId
         });
+
         const savedCategory = await newCategory.save();
         res.status(201).json(savedCategory);
     } catch (error) {

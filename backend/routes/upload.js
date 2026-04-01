@@ -1,28 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const Subject = require('../models/Subject');
 const Module = require('../models/Module');
+const Category = require('../models/Category');
 
-// Configure multer storage
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../uploads/');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
+// Cloudinary configuration
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'blockmate-uploads',
+        resource_type: 'auto',
+        allowed_formats: ['jpg', 'png', 'pdf', 'doc', 'docx', 'webp', 'jpeg'],
+        public_id: (req, file) => Date.now() + '-' + file.originalname.split('.')[0]
     }
 });
 
 const upload = multer({ storage: storage });
 
-// POST upload file and attach to subject
 router.post('/subject/:id', upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
@@ -36,7 +39,8 @@ router.post('/subject/:id', upload.single('file'), async (req, res) => {
 
         const fileData = {
             name: req.body.name || req.file.originalname,
-            url: `/uploads/${req.file.filename}`
+            url: req.file.path, // Cloudinary gives the full URL in path
+            public_id: req.file.filename // Store public_id for deletion
         };
 
         subject.files.push(fileData);
@@ -65,7 +69,8 @@ router.post('/module/:id', upload.single('file'), async (req, res) => {
 
         const fileData = {
             name: req.body.name || req.file.originalname,
-            url: `/uploads/${req.file.filename}`
+            url: req.file.path,
+            public_id: req.file.filename
         };
 
         moduleItem.files.push(fileData);
@@ -80,7 +85,38 @@ router.post('/module/:id', upload.single('file'), async (req, res) => {
     }
 });
 
-// POST add external link to subject
+// POST upload file and attach to category
+router.post('/category/:id', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        const category = await Category.findById(req.params.id);
+        if (!category) {
+            return res.status(404).json({ message: 'Category not found' });
+        }
+
+        const fileData = {
+            name: req.body.name || req.file.originalname,
+            url: req.file.path,
+            public_id: req.file.filename
+        };
+
+        category.files = category.files || [];
+        category.files.push(fileData);
+        await category.save();
+
+        res.status(200).json({
+            message: 'File uploaded and attached to category',
+            file: fileData
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// POST add external link to subject (unchanged but included for completeness if needed)
 router.post('/link/subject/:id', async (req, res) => {
     try {
         const { name, url } = req.body;
@@ -127,12 +163,9 @@ router.delete('/subject/:id/:fileId', async (req, res) => {
         const file = subject.files.id(req.params.fileId);
         if (!file) return res.status(404).json({ message: 'File not found' });
 
-        // Delete from filesystem only if it's an uploaded file
-        if (file.url && file.url.startsWith('/uploads/')) {
-            const filePath = path.join(__dirname, '..', file.url);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
+        // Delete from Cloudinary if it's a Cloudinary file
+        if (file.public_id) {
+            await cloudinary.uploader.destroy(file.public_id);
         }
 
         subject.files.pull(req.params.fileId);
@@ -153,18 +186,37 @@ router.delete('/module/:id/:fileId', async (req, res) => {
         const file = moduleItem.files.id(req.params.fileId);
         if (!file) return res.status(404).json({ message: 'File not found' });
 
-        // Delete from filesystem only if it's an uploaded file
-        if (file.url && file.url.startsWith('/uploads/')) {
-            const filePath = path.join(__dirname, '..', file.url);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
+        // Delete from Cloudinary if it's a Cloudinary file
+        if (file.public_id) {
+            await cloudinary.uploader.destroy(file.public_id);
         }
 
         moduleItem.files.pull(req.params.fileId);
         await moduleItem.save();
 
         res.status(200).json({ message: 'File deleted from module' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// DELETE file/link from category
+router.delete('/category/:id/:fileId', async (req, res) => {
+    try {
+        const category = await Category.findById(req.params.id);
+        if (!category) return res.status(404).json({ message: 'Category not found' });
+
+        const file = category.files.id(req.params.fileId);
+        if (!file) return res.status(404).json({ message: 'File not found' });
+
+        if (file.public_id) {
+            await cloudinary.uploader.destroy(file.public_id);
+        }
+
+        category.files.pull(req.params.fileId);
+        await category.save();
+
+        res.status(200).json({ message: 'File deleted from category' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

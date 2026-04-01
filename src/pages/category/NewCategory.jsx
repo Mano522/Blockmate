@@ -14,10 +14,17 @@ const NewCategory = ({ subjectId, moduleId, subjectTitle, onBack }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title) {
+
+    if (!formData.title.trim()) {
       toast.error("Title is required");
       return;
     }
+
+    if (!formData.moduleId || !formData.moduleId.trim()) {
+      toast.error("Please select a module before adding a question");
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post("/categories", formData);
