@@ -20,6 +20,10 @@ const CategorySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Subject'
     },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     files: [{
         name: { type: String, required: true },
         url: { type: String, required: true },

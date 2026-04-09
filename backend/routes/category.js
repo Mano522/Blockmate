@@ -49,7 +49,7 @@ router.get('/:id', async (req, res) => {
 
 // POST new category
 router.post('/', async (req, res) => {
-    const { title, desc, subjectId, moduleId } = req.body;
+    const { title, desc, subjectId, moduleId, userId } = req.body;
 
     if (!title || !title.trim()) {
         return res.status(400).json({ message: 'Category title is required' });
@@ -76,7 +76,8 @@ router.post('/', async (req, res) => {
             title: title.trim(),
             desc: desc ? desc.trim() : '',
             subject: subjectId || module.subject,
-            module: moduleId
+            module: moduleId,
+            user: userId || undefined
         });
 
         const savedCategory = await newCategory.save();
