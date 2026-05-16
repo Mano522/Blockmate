@@ -5,7 +5,7 @@ const Footer = () => {
         <footer className="footer">
             <div className="footer-inner">
                 <p className="footer-text">
-                    <span className="footer-brand">Designed & Developed by VENZENITH❤️</span>
+                    <span className="footer-brand"> Developed by VenZenith❤️</span>
                 </p>
                 <div className="footer-tagline">
                     For Providing Clarity For VTU Students.
