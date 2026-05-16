@@ -1,0 +1,23 @@
+name: Vercel Auto Deploy
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v22
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: team_U9Hem585N1RB6s8tUOqx8siv
+          vercel-project-id: prj_gJkyqNJhSwpsqPiaWaLRA5hgqPfK
+          vercel-args: '--prod'
+          github-comment: false
+          working-directory: .

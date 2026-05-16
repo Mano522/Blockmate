@@ -9,7 +9,9 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "push": "git push origin HEAD",
+    "push-and-deploy": "git push origin HEAD"
   },
   "dependencies": {
     "axios": "^1.13.5",
